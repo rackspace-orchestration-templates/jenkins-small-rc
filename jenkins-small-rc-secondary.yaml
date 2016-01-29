@@ -1,0 +1,114 @@
+heat_template_version: 2015-10-15
+
+description: |
+ #### Jenkins Secondary
+
+parameter_groups:
+
+parameters:
+  server_name:
+    type: string
+    default: example-0
+  server_flavor:
+    type: string
+    default: 4 GB General Purpose v1
+    constraints:
+    - allowed_values:
+      - 1 GB General Purpose v1
+      - 2 GB General Purpose v1
+      - 4 GB General Purpose v1
+      - 8 GB General Purpose v1
+  server_image:
+    type: string
+    default: f4bbbce2-50b0-4b07-bf09-96c175a45f4b
+    constraints:
+    - allowed_values:
+      - f4bbbce2-50b0-4b07-bf09-96c175a45f4b
+  ssh_key:
+    type: string
+    label: SSH Key
+    description: SSH Key for Jenkins Slave Nodes
+  parent_stack_id:
+    type: string
+    default: None
+  apache_default_domain:
+    type: string
+    default: exmaple.com
+  master_server:
+    type: string
+  rc_network_name:
+    type: string
+    label: RackConnect Network
+    description: Name or UUID of RackConnected network to attach this server to
+    constraints:
+    - custom_constraint: rackconnect.network
+resources:
+  upload_role_config:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: script
+      outputs:
+      - name: results
+      config: |
+        #!/bin/bash
+        set -e
+        git clone -b 'master' --single-branch --progress https://github.com/rackspace-orchestration-templates/ansible-roles.git /etc/ansible/roles > $heat_outputs_path.results 2>&1
+
+  jenkins_config:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ansible
+      config: |
+        ---
+        - name: Install and configure Jenkins
+          hosts: localhost
+          connection: local
+          roles:
+          - common
+          - jenkins
+  deploy_roles:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      signal_transport: TEMP_URL_SIGNAL
+      config:
+        get_resource: upload_role_config
+      server:
+        get_resource: jenkins_server
+  deploy_jenkins:
+    type: OS::Heat::SoftwareDeployment
+    depends_on: deploy_roles
+    properties:
+      signal_transport: TEMP_URL_SIGNAL
+      input_values:
+        tz: "America/Chicago"
+        jenkins_ip: { get_param: master_server }
+        jenkins_role: 'slave'
+      config:
+        get_resource: jenkins_config
+      server:
+        get_resource: jenkins_server
+  jenkins_server:
+    type: OS::Nova::Server
+    properties:
+      name: { get_param: "server_name" }
+      key_name: { get_param: "ssh_key" }
+      image: { get_param: server_image }
+      flavor: { get_param: server_flavor }
+      software_config_transport: POLL_TEMP_URL
+      config_drive: true
+      user_data_format: SOFTWARE_CONFIG
+      networks:
+      - network: { get_param: rc_network_name }
+      - uuid: 11111111-1111-1111-1111-111111111111
+      metadata:
+        rax-heat: { get_param: "parent_stack_id" }
+        build_config: "monitoring_defaults"
+outputs:
+  public_ip:
+    description: Server Public IP
+    value:
+      get_attr: [jenkins_server, networks, { get_param: rc_network_name }, 0]
+  private_ip:
+    description: Server Private IP
+    value:
+      get_attr: [jenkins_server, networks, private, 0]
