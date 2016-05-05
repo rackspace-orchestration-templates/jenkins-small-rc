@@ -42,6 +42,13 @@ parameters:
     description: Name or UUID of RackConnected network to attach this server to
     constraints:
     - custom_constraint: rackconnect.network
+  ansible_source:
+    type: string
+    default: http://catalog.rs-heat.com/ansible-roles/ansible-roles.tar.gz
+    label: Ansible Tarball
+    description: The Ansible Roles will be pulled from the location provided
+    immutable: true
+
 resources:
   upload_role_config:
     type: OS::Heat::SoftwareConfig
@@ -49,11 +56,16 @@ resources:
       group: script
       outputs:
       - name: results
-      config: |
-        #!/bin/bash
-        set -e
-        git clone -b 'master' --single-branch --progress https://github.com/rackspace-orchestration-templates/ansible-roles.git /etc/ansible/roles > $heat_outputs_path.results 2>&1
-
+      config:
+        str_replace:
+          template: |
+            #!/bin/bash
+            set -e
+            mkdir -p /etc/ansible/roles
+            wget ansible_source -O /tmp/ansible-roles.tar.gz 2>&1
+            tar -xf /tmp/ansible-roles.tar.gz --strip-components=1 -C /etc/ansible/roles
+          params:
+            ansible_source: { get_param: ansible_source }
   jenkins_config:
     type: OS::Heat::SoftwareConfig
     properties:
@@ -99,7 +111,7 @@ resources:
       user_data_format: SOFTWARE_CONFIG
       networks:
       - network: { get_param: rc_network_name }
-      - uuid: 11111111-1111-1111-1111-111111111111
+      - network: 11111111-1111-1111-1111-111111111111
       metadata:
         rax-heat: { get_param: "parent_stack_id" }
         build_config: "monitoring_defaults"
