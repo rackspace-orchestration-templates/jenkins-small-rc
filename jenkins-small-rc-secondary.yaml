@@ -20,10 +20,14 @@ parameters:
       - 8 GB General Purpose v1
   server_image:
     type: string
-    default: f4bbbce2-50b0-4b07-bf09-96c175a45f4b
+    default: Ubuntu 14.04 LTS (Trusty Tahr) (PVHVM) (Orchestration)
+    label: Server Image
+    description: Image to be used for all servers in this stack
     constraints:
     - allowed_values:
-      - f4bbbce2-50b0-4b07-bf09-96c175a45f4b
+      - Ubuntu 14.04 LTS (Trusty Tahr) (PVHVM) (Orchestration)
+      - CentOS 7 (PVHVM) (Orchestration)
+    immutable: true
   ssh_key:
     type: string
     label: SSH Key
@@ -48,7 +52,6 @@ parameters:
     label: Ansible Tarball
     description: The Ansible Roles will be pulled from the location provided
     immutable: true
-
 resources:
   upload_role_config:
     type: OS::Heat::SoftwareConfig
@@ -66,6 +69,7 @@ resources:
             tar -xf /tmp/ansible-roles.tar.gz --strip-components=1 -C /etc/ansible/roles
           params:
             ansible_source: { get_param: ansible_source }
+
   jenkins_config:
     type: OS::Heat::SoftwareConfig
     properties:
