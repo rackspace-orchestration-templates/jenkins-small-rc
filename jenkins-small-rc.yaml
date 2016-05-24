@@ -202,7 +202,7 @@ resources:
     depends_on: jenkins_server
     properties:
       #host_ip_address: { get_attr: [jenkins_server, accessIPv4] }
-      server: { get_resource: lamp_server }
+      server: { get_resource: jenkins_server }
       BackupConfigurationName:
         str_replace:
           template: stack Weekly Backup
