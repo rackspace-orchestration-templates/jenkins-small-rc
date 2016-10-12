@@ -52,6 +52,8 @@ parameters:
     label: Ansible Tarball
     description: The Ansible Roles will be pulled from the location provided
     immutable: true
+  swarm_password:
+    type: string
 resources:
   upload_role_config:
     type: OS::Heat::SoftwareConfig
@@ -99,6 +101,7 @@ resources:
         tz: "America/Chicago"
         jenkins_ip: { get_param: master_server }
         jenkins_role: 'slave'
+        swarm_password: { get_param: swarm_password }
       config:
         get_resource: jenkins_config
       server:

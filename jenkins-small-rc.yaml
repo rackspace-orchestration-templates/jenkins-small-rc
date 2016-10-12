@@ -81,6 +81,10 @@ parameters:
     description: The Ansible Roles will be pulled from the location provided
     immutable: true
 resources:
+  jenkins_pass:
+    type: OS::Heat::RandomString
+  swarm_pass:
+    type: OS::Heat::RandomString
   #SSH Key
   ssh_key:
     type: OS::Nova::KeyPair
@@ -156,6 +160,8 @@ resources:
         jenkins_role: 'master'
         jenkins_port: '8080'
         jenkins_ip: { get_attr: [jenkins_server, networks, { get_param: rc_network_name }, 0] }
+        jenkins_admin_pass: { get_attr: [jenkins_pass, value] }
+        swarm_password: { get_attr: [swarm_pass, value] }
       config:
         get_resource: jenkins_config
       server:
@@ -241,6 +247,7 @@ resources:
           master_server: { get_attr: [jenkins_server, networks, { get_param: rc_network_name }, 0] }
           rc_network_name: { get_param: rc_network_name }
           ansible_source: { get_param: ansible_source }
+          swarm_password: { get_attr: [swarm_pass, value] }
 
 outputs:
   jenkins_public_ip:
@@ -263,3 +270,10 @@ outputs:
     description: Secondary Node IPs
     value:
       get_attr: [jenkins_secondary, public_ip]
+  jenkins_password:
+    description: Admin Password
+    value:
+      get_attr: [jenkins_pass, value]
+  jenkins_user:
+    description: Admin Username
+    value: 'admin'
